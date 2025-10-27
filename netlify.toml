@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  DISABLE_ESLINT = "1"
+  SKIP_ESLINT = "true"
+  NODE_VERSION = "20"

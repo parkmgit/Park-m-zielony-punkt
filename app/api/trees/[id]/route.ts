@@ -1,0 +1,42 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const result = await sql`
+      SELECT 
+        t.*,
+        sp.name as species_name,
+        s.name as site_name,
+        s.code as site_code,
+        w.name as worker_name,
+        c.name as creator_name
+      FROM trees t
+      LEFT JOIN species sp ON t.species_id = sp.id
+      LEFT JOIN sites s ON t.site_id = s.id
+      LEFT JOIN users w ON t.worker_id = w.id
+      LEFT JOIN users c ON t.created_by = c.id
+      WHERE t.id = ${params.id}
+    `;
+
+    const tree = result[0];
+
+    if (!tree) {
+      return NextResponse.json(
+        { error: 'Tree not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(tree);
+  } catch (error) {
+    console.error('Error fetching tree:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch tree' },
+      { status: 500 }
+    );
+  }
+}
