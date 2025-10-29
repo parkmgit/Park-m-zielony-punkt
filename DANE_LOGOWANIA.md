@@ -26,12 +26,27 @@ Domyślni użytkownicy nie mieli ustawionych haseł. Problem został rozwiązany
    - Email: `piotr.wisniewski@park-m.pl`
    - Hasło: `password123`
 
+## Konfiguracja bazy danych MariaDB (Zenbox)
+
+**Host:** s15.zenbox.pl (2.57.138.166)  
+**Port:** 3306  
+**User:** parkm_drzewa  
+**Password:** GoZV5NcZP1  
+**Database:** parkm_trees
+
+## Konfiguracja FTP (Zenbox)
+
+**FTP:** drzewa@trees.park-m.pl  
+**FTP Host:** s15.zenbox.pl  
+**FTP Password:** YvoUtEoZ7z
+
 ## Jak uruchomić
 
-1. Usuń starą bazę danych (jeśli istnieje)
-2. Uruchom serwer: `npm run dev`
-3. Zainicjuj bazę: otwórz `http://localhost:3000/api/init-db`
-4. Zaloguj się na stronie logowania
+1. Uruchom serwer: `npm run dev`
+2. Zainicjuj bazę: otwórz `http://localhost:3000/api/init`
+3. Zaloguj się na stronie logowania: `http://localhost:3000/login`
+
+**Uwaga:** Aplikacja łączy się ze zdalną bazą danych na Zenbox (s15.zenbox.pl)
 
 ## Rejestracja nowych użytkowników
 

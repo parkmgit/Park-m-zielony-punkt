@@ -6,8 +6,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, password, role } = body as RegisterData;
 
+    console.log('Register attempt:', { name, email: email?.trim().toLowerCase(), role, passwordLength: password?.length });
+
     // Validate required fields
     if (!name || !email || !password || !role) {
+      console.log('Missing required fields:', { name: !!name, email: !!email, password: !!password, role: !!role });
       return NextResponse.json(
         { error: 'Wszystkie pola są wymagane' },
         { status: 400 }
@@ -18,11 +21,14 @@ export async function POST(request: NextRequest) {
 
     // Check if registration failed
     if ('error' in result) {
+      console.log('Registration failed:', result.error);
       return NextResponse.json(
         { error: result.error },
         { status: 400 }
       );
     }
+
+    console.log('Registration successful for:', result.email);
 
     // Registration successful
     return NextResponse.json({

@@ -1,13 +1,27 @@
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcrypt';
 
+// Detect environment: use SQLite locally, MariaDB on production
+// Use SQLite if explicitly requested OR if no DB_HOST is set (local development)
+const USE_SQLITE = process.env.USE_SQLITE !== 'false' && (
+  process.env.NODE_ENV !== 'production' || 
+  !process.env.DB_HOST ||
+  process.env.USE_SQLITE === 'true'
+);
+
+if (USE_SQLITE) {
+  console.log('🔧 Using SQLite for local development');
+} else {
+  console.log('🌐 Using MariaDB for production (Zenbox)');
+}
+
 // MariaDB connection configuration for Zenbox
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
+  host: process.env.DB_HOST || 's15.zenbox.pl',
   port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'park_m_trees',
+  user: process.env.DB_USER || 'parkm_drzewa',
+  password: process.env.DB_PASSWORD || 'GoZV5NcZP1',
+  database: process.env.DB_NAME || 'parkm_trees',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -20,19 +34,34 @@ const pool = mysql.createPool(dbConfig);
 
 // Helper function to execute queries
 export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> {
-  const connection = await pool.getConnection();
-  try {
-    const [rows] = await connection.execute(sql, params);
-    return rows as T[];
-  } finally {
-    connection.release();
+  if (USE_SQLITE) {
+    // Use SQLite
+    const { query: sqliteQuery } = await import('./db-sqlite');
+    return Promise.resolve(sqliteQuery<T>(sql, params || []));
+  } else {
+    // Use MariaDB
+    const connection = await pool.getConnection();
+    try {
+      const [rows] = await connection.execute(sql, params);
+      return rows as T[];
+    } finally {
+      connection.release();
+    }
   }
 }
 
 // Helper function for single row queries
 export async function queryOne<T = any>(sql: string, params?: any[]): Promise<T | null> {
-  const rows = await query<T>(sql, params);
-  return rows.length > 0 ? rows[0] : null;
+  if (USE_SQLITE) {
+    // Use SQLite
+    const { queryOne: sqliteQueryOne } = await import('./db-sqlite');
+    const result = sqliteQueryOne<T>(sql, params || []);
+    return Promise.resolve(result || null);
+  } else {
+    // Use MariaDB
+    const rows = await query<T>(sql, params);
+    return rows.length > 0 ? rows[0] : null;
+  }
 }
 
 // Test database connection
@@ -47,9 +76,39 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
+// Ensure database exists
+async function ensureDatabase() {
+  try {
+    const connection = await mysql.createConnection({
+      host: dbConfig.host,
+      port: dbConfig.port,
+      user: dbConfig.user,
+      password: dbConfig.password
+    });
+    
+    await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    await connection.end();
+    console.log(`✓ Database ${dbConfig.database} is ready`);
+  } catch (error) {
+    console.error('Failed to ensure database exists:', error);
+    throw error;
+  }
+}
+
 // Initialize database schema
 export async function initDB() {
   try {
+    // Use SQLite for local development
+    if (USE_SQLITE) {
+      const { initDB: sqliteInitDB } = await import('./db-sqlite');
+      sqliteInitDB();
+      return;
+    }
+    
+    // Use MariaDB for production
+    // Ensure database exists first
+    await ensureDatabase();
+    
     // Users table
     await query(`
       CREATE TABLE IF NOT EXISTS users (

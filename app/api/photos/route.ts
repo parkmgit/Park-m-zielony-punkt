@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { query } from '@/lib/db';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const entityType = searchParams.get('entity_type');
     const entityId = searchParams.get('entity_id');
 
-    let query = `
+    let sqlQuery = `
       SELECT 
         p.*,
         u.name as taker_name
@@ -21,18 +21,18 @@ export async function GET(request: NextRequest) {
     const params: any[] = [];
 
     if (entityType) {
-      query += ' AND p.entity_type = $' + (params.length + 1);
+      sqlQuery += ' AND p.entity_type = ?';
       params.push(entityType);
     }
 
     if (entityId) {
-      query += ' AND p.entity_id = $' + (params.length + 1);
+      sqlQuery += ' AND p.entity_id = ?';
       params.push(entityId);
     }
 
-    query += ' ORDER BY p.taken_at DESC';
+    sqlQuery += ' ORDER BY p.taken_at DESC';
 
-    const photos = await sql.query(query, params);
+    const photos = await query(sqlQuery, params);
 
     return NextResponse.json(photos);
   } catch (error) {
@@ -75,15 +75,12 @@ export async function POST(request: NextRequest) {
 
     // Save to database
     const url = `/uploads/${filename}`;
-    const stmt = db.prepare(`
-      INSERT INTO photos (entity_type, entity_id, filename, url, taken_by)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(entityType, entityId, filename, url, takenBy);
+    await query(
+      'INSERT INTO photos (entity_type, entity_id, filename, url, taken_by) VALUES (?, ?, ?, ?, ?)',
+      [entityType, entityId, filename, url, takenBy]
+    );
 
     return NextResponse.json({
-      id: result.lastInsertRowid,
       url,
       message: 'Photo uploaded successfully'
     }, { status: 201 });

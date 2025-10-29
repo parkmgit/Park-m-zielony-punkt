@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { query } from '@/lib/db';
 import { CreateTreeActionDTO } from '@/lib/types';
 
 export async function GET(
@@ -7,15 +7,15 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const actions = await sql`
+    const actions = await query(`
       SELECT 
         ta.*,
         u.name as performer_name
       FROM tree_actions ta
       LEFT JOIN users u ON ta.performed_by = u.id
-      WHERE ta.tree_id = ${params.id}
+      WHERE ta.tree_id = ?
       ORDER BY ta.performed_at DESC
-    `;
+    `, [params.id]);
 
     return NextResponse.json(actions);
   } catch (error) {
@@ -34,17 +34,15 @@ export async function POST(
   try {
     const body: CreateTreeActionDTO = await request.json();
 
-    const result = await sql`
-      INSERT INTO tree_actions (tree_id, action_type, notes, performed_by)
-      VALUES (${params.id}, ${body.action_type}, ${body.notes || null}, ${body.performed_by})
-      RETURNING id
-    `;
+    await query(
+      'INSERT INTO tree_actions (tree_id, action_type, notes, performed_by) VALUES (?, ?, ?, ?)',
+      [params.id, body.action_type, body.notes || null, body.performed_by]
+    );
 
     // Update tree's updated_at timestamp
-    await sql`UPDATE trees SET updated_at = CURRENT_TIMESTAMP WHERE id = ${params.id}`;
+    await query('UPDATE trees SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [params.id]);
 
     return NextResponse.json({
-      id: result[0].id,
       message: 'Tree action created successfully'
     }, { status: 201 });
   } catch (error) {

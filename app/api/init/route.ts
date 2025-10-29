@@ -3,7 +3,7 @@ import { initDB } from '@/lib/db';
 
 export async function GET() {
   try {
-    initDB();
+    await initDB();
     return NextResponse.json({ message: 'Database initialized successfully' });
   } catch (error) {
     console.error('Database initialization error:', error);

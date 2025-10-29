@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { query, queryOne } from '@/lib/db';
 import { CreateTreeDTO } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const workerId = searchParams.get('worker_id');
 
-    let query = `
+    let sqlQuery = `
       SELECT 
         t.*,
         sp.name as species_name,
@@ -33,30 +33,23 @@ export async function GET(request: NextRequest) {
     const params: any[] = [];
 
     if (siteId) {
-      query += ' AND t.site_id = ?';
+      sqlQuery += ' AND t.site_id = ?';
       params.push(siteId);
     }
 
     if (status) {
-      query += ' AND t.status = ?';
+      sqlQuery += ' AND t.status = ?';
       params.push(status);
     }
 
     if (workerId) {
-      query += ' AND t.worker_id = ?';
+      sqlQuery += ' AND t.worker_id = ?';
       params.push(workerId);
     }
 
-    query += ' ORDER BY t.created_at DESC';
+    sqlQuery += ' ORDER BY t.created_at DESC';
 
-    // Convert query to use Neon DB with parameterized queries
-    let neonQuery = query;
-    let paramIndex = 1;
-    params.forEach(() => {
-      neonQuery = neonQuery.replace('?', `$${paramIndex++}`);
-    });
-
-    const trees = await sql.query(neonQuery, params);
+    const trees = await query(sqlQuery, params);
 
     return NextResponse.json(trees);
   } catch (error) {
@@ -89,34 +82,36 @@ export async function POST(request: NextRequest) {
       created_by: body.created_by
     });
 
-    const result = await sql`
-      INSERT INTO trees (
+    await query(
+      `INSERT INTO trees (
         tree_number, species_id, site_id, worker_id, plant_date, status,
         latitude, longitude, accuracy, notes, created_by
-      ) VALUES (
-        ${body.tree_number || null},
-        ${body.species_id ? parseInt(body.species_id as any) : null},
-        ${parseInt(body.site_id as any)},
-        ${body.worker_id ? parseInt(body.worker_id as any) : null},
-        ${body.plant_date},
-        ${body.status},
-        ${body.latitude},
-        ${body.longitude},
-        ${body.accuracy || null},
-        ${body.notes || null},
-        ${body.created_by}
-      )
-      RETURNING id
-    `;
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        body.tree_number || null,
+        body.species_id ? parseInt(body.species_id as any) : null,
+        parseInt(body.site_id as any),
+        body.worker_id ? parseInt(body.worker_id as any) : null,
+        body.plant_date,
+        body.status,
+        body.latitude,
+        body.longitude,
+        body.accuracy || null,
+        body.notes || null,
+        body.created_by
+      ]
+    );
 
-    const treeId = result[0].id;
+    // Get the last inserted tree
+    const lastTree = await query<any>('SELECT id FROM trees ORDER BY id DESC LIMIT 1');
+    const treeId = lastTree[0]?.id;
     console.log('Tree inserted with ID:', treeId);
 
     // Also create initial action
-    await sql`
-      INSERT INTO tree_actions (tree_id, action_type, notes, performed_by)
-      VALUES (${treeId}, 'posadzenie', ${body.notes || 'Drzewo posadzone'}, ${body.created_by})
-    `;
+    await query(
+      'INSERT INTO tree_actions (tree_id, action_type, notes, performed_by) VALUES (?, ?, ?, ?)',
+      [treeId, 'posadzenie', body.notes || 'Drzewo posadzone', body.created_by]
+    );
 
     console.log('Tree action created successfully');
     console.log('=== SUCCESS ===\n');

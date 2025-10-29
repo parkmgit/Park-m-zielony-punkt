@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { query, queryOne } from '@/lib/db';
 
 export async function GET() {
   try {
-    const result = await sql`
+    const result = await query(`
       SELECT 
         p.*,
         COUNT(DISTINCT s.id) as sites_count,
@@ -12,9 +12,9 @@ export async function GET() {
       LEFT JOIN sites s ON s.project_id = p.id
       LEFT JOIN trees t ON t.site_id = s.id
       WHERE p.active = 1
-      GROUP BY p.id, p.project_number, p.name, p.location, p.client, p.trees_to_plant, p.trees_planted, p.active, p.created_at
+      GROUP BY p.id
       ORDER BY p.created_at DESC
-    `;
+    `);
 
     return NextResponse.json(result);
   } catch (error) {
@@ -36,20 +36,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert project
-    const result = db.prepare(`
-      INSERT INTO projects (project_number, name, location, client, trees_to_plant)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(project_number, name, location || null, client || null, trees_to_plant || 0);
+    await query(
+      'INSERT INTO projects (project_number, name, location, client, trees_to_plant) VALUES (?, ?, ?, ?, ?)',
+      [project_number, name, location || null, client || null, trees_to_plant || 0]
+    );
 
-    const projectId = result.lastInsertRowid;
+    // Get the newly created project
+    const newProjects = await query<any>('SELECT * FROM projects WHERE project_number = ? ORDER BY id DESC LIMIT 1', [project_number]);
+    const projectId = newProjects[0]?.id;
 
     // Automatically create a site for this project
-    db.prepare(`
-      INSERT INTO sites (project_id, code, name, address)
-      VALUES (?, ?, ?, ?)
-    `).run(projectId, project_number, name, location || null);
+    await query(
+      'INSERT INTO sites (project_id, code, name, address) VALUES (?, ?, ?, ?)',
+      [projectId, project_number, name, location || null]
+    );
 
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(projectId);
+    const project = await queryOne('SELECT * FROM projects WHERE id = ?', [projectId]);
 
     return NextResponse.json(project, { status: 201 });
   } catch (error: any) {
@@ -74,8 +76,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Soft delete - set active to 0
-    db.prepare('UPDATE projects SET active = 0 WHERE id = ?').run(id);
-    db.prepare('UPDATE sites SET active = 0 WHERE project_id = ?').run(id);
+    await query('UPDATE projects SET active = 0 WHERE id = ?', [id]);
+    await query('UPDATE sites SET active = 0 WHERE project_id = ?', [id]);
 
     return NextResponse.json({ success: true, message: 'Projekt został usunięty' });
   } catch (error) {
@@ -96,20 +98,18 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    db.prepare(`
-      UPDATE projects 
-      SET project_number = ?, name = ?, location = ?, client = ?, trees_to_plant = ?
-      WHERE id = ?
-    `).run(project_number, name, location || null, client || null, trees_to_plant || 0, id);
+    await query(
+      'UPDATE projects SET project_number = ?, name = ?, location = ?, client = ?, trees_to_plant = ? WHERE id = ?',
+      [project_number, name, location || null, client || null, trees_to_plant || 0, id]
+    );
 
     // Update corresponding site
-    db.prepare(`
-      UPDATE sites 
-      SET code = ?, name = ?, address = ?
-      WHERE project_id = ?
-    `).run(project_number, name, location || null, id);
+    await query(
+      'UPDATE sites SET code = ?, name = ?, address = ? WHERE project_id = ?',
+      [project_number, name, location || null, id]
+    );
 
-    const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id);
+    const project = await queryOne('SELECT * FROM projects WHERE id = ?', [id]);
 
     return NextResponse.json(project);
   } catch (error: any) {

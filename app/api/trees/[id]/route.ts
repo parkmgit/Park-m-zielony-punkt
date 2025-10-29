@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { query, queryOne } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const result = await sql`
+    const tree = await queryOne(`
       SELECT 
         t.*,
         sp.name as species_name,
@@ -19,10 +19,8 @@ export async function GET(
       LEFT JOIN sites s ON t.site_id = s.id
       LEFT JOIN users w ON t.worker_id = w.id
       LEFT JOIN users c ON t.created_by = c.id
-      WHERE t.id = ${params.id}
-    `;
-
-    const tree = result[0];
+      WHERE t.id = ?
+    `, [params.id]);
 
     if (!tree) {
       return NextResponse.json(
