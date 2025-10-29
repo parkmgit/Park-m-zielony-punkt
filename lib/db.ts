@@ -171,9 +171,9 @@ export async function initDB() {
 async function insertDefaultData() {
   try {
     // Check if data already exists
-    const userCount = await query<{ count: number }>('SELECT COUNT(*) as count FROM users');
+    const userCount = await query<{ count: string | number }>('SELECT COUNT(*) as count FROM users');
     
-    if (userCount[0].count === 0) {
+    if (Number(userCount[0].count) === 0) {
       // Hash default password for all users (password123)
       const defaultPassword = 'password123';
       const passwordHash = await bcrypt.hash(defaultPassword, 10);
