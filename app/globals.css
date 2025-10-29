@@ -6,15 +6,13 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0f172a;
+  --foreground: #e2e8f0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f172a;
-    --foreground: #e2e8f0;
-  }
+.light {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
 .dark {
@@ -55,39 +53,43 @@ svg rect {
   min-height: 100vh;
 }
 
-/* Fix text colors in light mode */
-@media (prefers-color-scheme: light) {
-  body {
-    color: #171717;
-  }
-  
-  input, textarea, select {
-    color: #171717;
-    background-color: #ffffff;
-    border-color: #d1d5db;
-  }
+/* Default dark mode styles */
+body {
+  color: #e2e8f0;
 }
 
-/* Fix text colors in dark mode */
-@media (prefers-color-scheme: dark) {
-  body {
-    color: #e2e8f0;
-  }
-  
-  h1, h2, h3, h4, h5, h6, p, span, label {
-    color: #e2e8f0;
-  }
-  
-  input, textarea, select {
-    color: #e2e8f0;
-    background-color: #1e293b;
-    border-color: #475569;
-  }
-  
-  /* Card backgrounds */
-  .bg-white {
-    background-color: #1e293b;
-  }
+h1, h2, h3, h4, h5, h6, p, span, label {
+  color: #e2e8f0;
+}
+
+input, textarea, select {
+  color: #e2e8f0;
+  background-color: #1e293b;
+  border-color: #475569;
+}
+
+/* Card backgrounds in dark mode */
+.bg-white {
+  background-color: #1e293b;
+}
+
+/* Light mode overrides */
+.light body {
+  color: #171717;
+}
+
+.light h1, .light h2, .light h3, .light h4, .light h5, .light h6, .light p, .light span, .light label {
+  color: #171717;
+}
+
+.light input, .light textarea, .light select {
+  color: #171717;
+  background-color: #ffffff;
+  border-color: #d1d5db;
+}
+
+.light .bg-white {
+  background-color: #ffffff;
 }
 
 /* Ensure all interactive elements are clickable */
