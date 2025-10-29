@@ -51,7 +51,15 @@ export async function GET(request: NextRequest) {
 
     const trees = await query(sqlQuery, params);
 
-    return NextResponse.json(trees);
+    // Convert latitude/longitude from string to number (PostgreSQL DECIMAL returns string)
+    const treesWithNumbers = trees.map((tree: any) => ({
+      ...tree,
+      latitude: parseFloat(tree.latitude),
+      longitude: parseFloat(tree.longitude),
+      accuracy: tree.accuracy ? parseFloat(tree.accuracy) : null
+    }));
+
+    return NextResponse.json(treesWithNumbers);
   } catch (error) {
     console.error('Error fetching trees:', error);
     return NextResponse.json(
