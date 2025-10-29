@@ -58,88 +58,35 @@ svg rect {
 /* Fix text colors in light mode */
 @media (prefers-color-scheme: light) {
   body {
-    color: #171717 !important;
-  }
-  
-  h1, h2, h3, h4, h5, h6, p, span, div, label, a {
-    color: #171717 !important;
+    color: #171717;
   }
   
   input, textarea, select {
-    color: #171717 !important;
-    background-color: #ffffff !important;
-    border-color: #d1d5db !important;
-  }
-  
-  button {
-    color: #ffffff !important;
-  }
-  
-  /* Ensure form labels are visible */
-  label {
-    color: #171717 !important;
-  }
-  
-  /* Card backgrounds */
-  .bg-white {
-    background-color: #ffffff !important;
-  }
-  
-  /* Text on light backgrounds */
-  .text-gray-900 {
-    color: #171717 !important;
-  }
-  
-  .text-gray-700 {
-    color: #374151 !important;
-  }
-  
-  .text-gray-600 {
-    color: #4b5563 !important;
+    color: #171717;
+    background-color: #ffffff;
+    border-color: #d1d5db;
   }
 }
 
 /* Fix text colors in dark mode */
 @media (prefers-color-scheme: dark) {
   body {
-    color: #e2e8f0 !important;
+    color: #e2e8f0;
   }
   
-  h1, h2, h3, h4, h5, h6, p, span, div, label, a {
-    color: #e2e8f0 !important;
+  h1, h2, h3, h4, h5, h6, p, span, label {
+    color: #e2e8f0;
   }
   
   input, textarea, select {
-    color: #e2e8f0 !important;
-    background-color: #1e293b !important;
-    border-color: #475569 !important;
-  }
-  
-  button {
-    color: #ffffff !important;
-  }
-  
-  /* Ensure form labels are visible */
-  label {
-    color: #e2e8f0 !important;
+    color: #e2e8f0;
+    background-color: #1e293b;
+    border-color: #475569;
   }
   
   /* Card backgrounds */
   .bg-white {
-    background-color: #1e293b !important;
-  }
-  
-  /* Text on dark backgrounds */
-  .text-gray-900 {
-    color: #e2e8f0 !important;
-  }
-  
-  .text-gray-700 {
-    color: #cbd5e1 !important;
-  }
-  
-  .text-gray-600 {
-    color: #94a3b8 !important;
+    background-color: #1e293b;
   }
 }
 
