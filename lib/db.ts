@@ -1,73 +1,39 @@
-import mysql from 'mysql2/promise';
+import { neon } from '@netlify/neon';
 import bcrypt from 'bcrypt';
 
-// Detect environment: use SQLite locally, MariaDB on production
-// Use SQLite if explicitly requested OR if no DB_HOST is set (local development)
-const USE_SQLITE = process.env.USE_SQLITE !== 'false' && (
-  process.env.NODE_ENV !== 'production' || 
-  !process.env.DB_HOST ||
-  process.env.USE_SQLITE === 'true'
-);
+// Neon PostgreSQL connection - automatically uses NETLIFY_DATABASE_URL
+const sql = neon();
 
-if (USE_SQLITE) {
-  console.log('🔧 Using SQLite for local development');
-} else {
-  console.log('🌐 Using MariaDB for production (Zenbox)');
-}
-
-// MariaDB connection configuration for Zenbox
-const dbConfig = {
-  host: process.env.DB_HOST || 's15.zenbox.pl',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'parkm_drzewa',
-  password: process.env.DB_PASSWORD || 'GoZV5NcZP1',
-  database: process.env.DB_NAME || 'parkm_trees',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 0
-};
-
-// Create connection pool
-const pool = mysql.createPool(dbConfig);
+console.log('🚀 Using Neon PostgreSQL database');
 
 // Helper function to execute queries
-export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> {
-  if (USE_SQLITE) {
-    // Use SQLite
-    const { query: sqliteQuery } = await import('./db-sqlite');
-    return Promise.resolve(sqliteQuery<T>(sql, params || []));
-  } else {
-    // Use MariaDB
-    const connection = await pool.getConnection();
-    try {
-      const [rows] = await connection.execute(sql, params);
-      return rows as T[];
-    } finally {
-      connection.release();
+export async function query<T = any>(sqlQuery: string, params?: any[]): Promise<T[]> {
+  try {
+    // Convert ? placeholders to $1, $2, etc. for PostgreSQL
+    let pgQuery = sqlQuery;
+    let paramIndex = 1;
+    while (pgQuery.includes('?')) {
+      pgQuery = pgQuery.replace('?', `$${paramIndex++}`);
     }
+    
+    const rows = await sql(pgQuery, params || []);
+    return rows as T[];
+  } catch (error) {
+    console.error('Query error:', error);
+    throw error;
   }
 }
 
 // Helper function for single row queries
-export async function queryOne<T = any>(sql: string, params?: any[]): Promise<T | null> {
-  if (USE_SQLITE) {
-    // Use SQLite
-    const { queryOne: sqliteQueryOne } = await import('./db-sqlite');
-    const result = sqliteQueryOne<T>(sql, params || []);
-    return Promise.resolve(result || null);
-  } else {
-    // Use MariaDB
-    const rows = await query<T>(sql, params);
-    return rows.length > 0 ? rows[0] : null;
-  }
+export async function queryOne<T = any>(sqlQuery: string, params?: any[]): Promise<T | null> {
+  const rows = await query<T>(sqlQuery, params);
+  return rows.length > 0 ? rows[0] : null;
 }
 
 // Test database connection
 export async function testConnection(): Promise<boolean> {
   try {
-    await pool.getConnection();
+    await sql`SELECT 1`;
     console.log('✓ Database connection successful');
     return true;
   } catch (error) {
@@ -76,160 +42,124 @@ export async function testConnection(): Promise<boolean> {
   }
 }
 
-// Ensure database exists
-async function ensureDatabase() {
-  try {
-    const connection = await mysql.createConnection({
-      host: dbConfig.host,
-      port: dbConfig.port,
-      user: dbConfig.user,
-      password: dbConfig.password
-    });
-    
-    await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
-    await connection.end();
-    console.log(`✓ Database ${dbConfig.database} is ready`);
-  } catch (error) {
-    console.error('Failed to ensure database exists:', error);
-    throw error;
-  }
-}
-
 // Initialize database schema
 export async function initDB() {
   try {
-    // Use SQLite for local development
-    if (USE_SQLITE) {
-      const { initDB: sqliteInitDB } = await import('./db-sqlite');
-      sqliteInitDB();
-      return;
-    }
-    
-    // Use MariaDB for production
-    // Ensure database exists first
-    await ensureDatabase();
+    console.log('Initializing PostgreSQL database schema...');
     
     // Users table
     await query(`
       CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        role ENUM('admin', 'brygadzista', 'pracownik') NOT NULL,
+        role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'brygadzista', 'pracownik')),
         email VARCHAR(255) UNIQUE,
         password_hash VARCHAR(255),
-        active TINYINT(1) DEFAULT 1,
+        active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      )
     `);
 
     // Projects (Projekty) table
     await query(`
       CREATE TABLE IF NOT EXISTS projects (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         project_number VARCHAR(100) NOT NULL UNIQUE,
         name VARCHAR(255) NOT NULL,
         location VARCHAR(500),
         client VARCHAR(255),
-        trees_to_plant INT DEFAULT 0,
-        trees_planted INT DEFAULT 0,
-        active TINYINT(1) DEFAULT 1,
+        trees_to_plant INTEGER DEFAULT 0,
+        trees_planted INTEGER DEFAULT 0,
+        active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      )
     `);
 
     // Sites (Budowy) table
     await query(`
       CREATE TABLE IF NOT EXISTS sites (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        project_id INT,
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER REFERENCES projects(id),
         code VARCHAR(100) NOT NULL UNIQUE,
         name VARCHAR(255) NOT NULL,
         address VARCHAR(500),
-        active TINYINT(1) DEFAULT 1,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (project_id) REFERENCES projects(id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Species (Gatunki) table
     await query(`
       CREATE TABLE IF NOT EXISTS species (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL UNIQUE,
         scientific_name VARCHAR(255),
-        active TINYINT(1) DEFAULT 1
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        active BOOLEAN DEFAULT true
+      )
     `);
 
     // Trees table
     await query(`
       CREATE TABLE IF NOT EXISTS trees (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         tree_number VARCHAR(100),
-        species_id INT,
-        site_id INT NOT NULL,
-        worker_id INT,
+        species_id INTEGER REFERENCES species(id),
+        site_id INTEGER NOT NULL REFERENCES sites(id),
+        worker_id INTEGER REFERENCES users(id),
         plant_date DATE NOT NULL,
-        status ENUM('posadzone', 'utrzymanie', 'wymiana', 'usuniete') NOT NULL,
+        status VARCHAR(50) NOT NULL CHECK (status IN ('posadzone', 'utrzymanie', 'wymiana', 'usuniete')),
         latitude DECIMAL(10, 8) NOT NULL,
         longitude DECIMAL(11, 8) NOT NULL,
         accuracy DECIMAL(10, 2),
         notes TEXT,
-        created_by INT NOT NULL,
+        created_by INTEGER NOT NULL REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (species_id) REFERENCES species(id),
-        FOREIGN KEY (site_id) REFERENCES sites(id),
-        FOREIGN KEY (worker_id) REFERENCES users(id),
-        FOREIGN KEY (created_by) REFERENCES users(id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Tree Actions table
     await query(`
       CREATE TABLE IF NOT EXISTS tree_actions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        tree_id INT NOT NULL,
-        action_type ENUM('posadzenie', 'podlewanie', 'przyciecie', 'inspekcja', 'wymiana', 'usuniecie') NOT NULL,
+        id SERIAL PRIMARY KEY,
+        tree_id INTEGER NOT NULL REFERENCES trees(id) ON DELETE CASCADE,
+        action_type VARCHAR(50) NOT NULL CHECK (action_type IN ('posadzenie', 'podlewanie', 'przyciecie', 'inspekcja', 'wymiana', 'usuniecie')),
         notes TEXT,
-        performed_by INT NOT NULL,
-        performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (tree_id) REFERENCES trees(id) ON DELETE CASCADE,
-        FOREIGN KEY (performed_by) REFERENCES users(id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        performed_by INTEGER NOT NULL REFERENCES users(id),
+        performed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `);
 
     // Photos table
     await query(`
       CREATE TABLE IF NOT EXISTS photos (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        entity_type ENUM('tree', 'tree_action') NOT NULL,
-        entity_id INT NOT NULL,
+        id SERIAL PRIMARY KEY,
+        entity_type VARCHAR(50) NOT NULL CHECK (entity_type IN ('tree', 'tree_action')),
+        entity_id INTEGER NOT NULL,
         filename VARCHAR(255) NOT NULL,
         url VARCHAR(500) NOT NULL,
         thumbnail_url VARCHAR(500),
         taken_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        taken_by INT NOT NULL,
-        FOREIGN KEY (taken_by) REFERENCES users(id)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        taken_by INTEGER NOT NULL REFERENCES users(id)
+      )
     `);
 
     // Sync Queue for offline support
     await query(`
       CREATE TABLE IF NOT EXISTS sync_queue (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         entity_type VARCHAR(100) NOT NULL,
         entity_data TEXT NOT NULL,
-        action ENUM('create', 'update', 'delete') NOT NULL,
+        action VARCHAR(50) NOT NULL CHECK (action IN ('create', 'update', 'delete')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        synced TINYINT(1) DEFAULT 0
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        synced BOOLEAN DEFAULT false
+      )
     `);
 
     // Insert default data
     await insertDefaultData();
     
-    console.log('Database initialized successfully');
+    console.log('✓ Database initialized successfully');
   } catch (error) {
     console.error('Database initialization error:', error);
     throw error;

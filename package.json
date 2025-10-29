@@ -12,6 +12,7 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "@heroui/react": "^2.8.5",
+    "@netlify/neon": "^0.1.0",
     "@types/bcrypt": "^5.0.2",
     "@types/leaflet": "^1.9.21",
     "bcrypt": "^5.1.1",
