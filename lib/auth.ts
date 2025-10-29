@@ -19,7 +19,7 @@ export async function login(email: string, password: string): Promise<User | { e
     // Normalize email
     const normalizedEmail = email.trim().toLowerCase();
     
-    const user = await queryOne<User>('SELECT * FROM users WHERE email = ? AND active = 1', [normalizedEmail]);
+    const user = await queryOne<User>('SELECT * FROM users WHERE email = ? AND active = true', [normalizedEmail]);
     
     if (!user) {
       return { error: 'Nieprawidłowy email lub hasło' };
@@ -83,7 +83,7 @@ export async function getCurrentUser(): Promise<User | null> {
       return null;
     }
 
-    const user = await queryOne<User>('SELECT * FROM users WHERE id = ? AND active = 1', [sessionData.userId]);
+    const user = await queryOne<User>('SELECT * FROM users WHERE id = ? AND active = true', [sessionData.userId]);
     
     return user;
   } catch (error) {
@@ -150,7 +150,7 @@ export async function register(data: RegisterData): Promise<User | { error: stri
 
     // Insert new user
     await query(
-      'INSERT INTO users (name, role, email, password_hash, active) VALUES (?, ?, ?, ?, 1)',
+      'INSERT INTO users (name, role, email, password_hash, active) VALUES (?, ?, ?, ?, true)',
       [normalizedName, data.role, normalizedEmail, password_hash]
     );
 
