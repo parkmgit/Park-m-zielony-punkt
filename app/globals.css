@@ -55,6 +55,50 @@ svg rect {
   min-height: 100vh;
 }
 
+/* Fix text colors in light mode */
+@media (prefers-color-scheme: light) {
+  body {
+    color: #171717 !important;
+  }
+  
+  h1, h2, h3, h4, h5, h6, p, span, div, label, a {
+    color: #171717 !important;
+  }
+  
+  input, textarea, select {
+    color: #171717 !important;
+    background-color: #ffffff !important;
+    border-color: #d1d5db !important;
+  }
+  
+  button {
+    color: #ffffff !important;
+  }
+  
+  /* Ensure form labels are visible */
+  label {
+    color: #171717 !important;
+  }
+  
+  /* Card backgrounds */
+  .bg-white {
+    background-color: #ffffff !important;
+  }
+  
+  /* Text on light backgrounds */
+  .text-gray-900 {
+    color: #171717 !important;
+  }
+  
+  .text-gray-700 {
+    color: #374151 !important;
+  }
+  
+  .text-gray-600 {
+    color: #4b5563 !important;
+  }
+}
+
 /* Fix text colors in dark mode */
 @media (prefers-color-scheme: dark) {
   body {
