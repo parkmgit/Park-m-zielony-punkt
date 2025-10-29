@@ -39,10 +39,17 @@ export async function POST(
       [params.id, body.action_type, body.notes || null, body.performed_by]
     );
 
+    // Get the newly created action
+    const newAction = await query(
+      'SELECT * FROM tree_actions WHERE tree_id = ? ORDER BY id DESC LIMIT 1',
+      [params.id]
+    );
+
     // Update tree's updated_at timestamp
-    await query('UPDATE trees SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [params.id]);
+    await query('UPDATE trees SET updated_at = NOW() WHERE id = ?', [params.id]);
 
     return NextResponse.json({
+      id: newAction[0].id,
       message: 'Tree action created successfully'
     }, { status: 201 });
   } catch (error) {

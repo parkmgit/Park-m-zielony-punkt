@@ -29,7 +29,15 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(tree);
+    // Convert latitude/longitude from string to number (PostgreSQL DECIMAL returns string)
+    const treeWithNumbers = {
+      ...tree,
+      latitude: parseFloat(tree.latitude),
+      longitude: parseFloat(tree.longitude),
+      accuracy: tree.accuracy ? parseFloat(tree.accuracy) : null
+    };
+
+    return NextResponse.json(treeWithNumbers);
   } catch (error) {
     console.error('Error fetching tree:', error);
     return NextResponse.json(
