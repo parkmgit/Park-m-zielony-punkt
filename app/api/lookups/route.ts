@@ -9,13 +9,13 @@ export async function GET() {
     let species = [];
 
     try {
-      users = await query('SELECT * FROM users WHERE active = 1 ORDER BY name');
+      users = await query('SELECT * FROM users WHERE active = true ORDER BY name');
     } catch (e) {
       console.error('Error loading users:', e);
     }
 
     try {
-      projects = await query('SELECT * FROM projects WHERE active = 1 ORDER BY name');
+      projects = await query('SELECT * FROM projects WHERE active = true ORDER BY name');
     } catch (e) {
       console.error('Error loading projects:', e);
     }
@@ -25,7 +25,7 @@ export async function GET() {
         SELECT s.*, p.name as project_name, p.project_number 
         FROM sites s
         LEFT JOIN projects p ON s.project_id = p.id
-        WHERE s.active = 1 
+        WHERE s.active = true 
         ORDER BY s.code
       `);
     } catch (e) {
@@ -33,7 +33,7 @@ export async function GET() {
     }
 
     try {
-      species = await query('SELECT * FROM species WHERE active = 1 ORDER BY name');
+      species = await query('SELECT * FROM species WHERE active = true ORDER BY name');
     } catch (e) {
       console.error('Error loading species:', e);
     }

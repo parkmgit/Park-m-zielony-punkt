@@ -11,7 +11,7 @@ export async function GET() {
       FROM projects p
       LEFT JOIN sites s ON s.project_id = p.id
       LEFT JOIN trees t ON t.site_id = s.id
-      WHERE p.active = 1
+      WHERE p.active = true
       GROUP BY p.id
       ORDER BY p.created_at DESC
     `);
@@ -75,9 +75,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID projektu jest wymagane' }, { status: 400 });
     }
 
-    // Soft delete - set active to 0
-    await query('UPDATE projects SET active = 0 WHERE id = ?', [id]);
-    await query('UPDATE sites SET active = 0 WHERE project_id = ?', [id]);
+    // Soft delete - set active to false
+    await query('UPDATE projects SET active = false WHERE id = ?', [id]);
+    await query('UPDATE sites SET active = false WHERE project_id = ?', [id]);
 
     return NextResponse.json({ success: true, message: 'Projekt został usunięty' });
   } catch (error) {
