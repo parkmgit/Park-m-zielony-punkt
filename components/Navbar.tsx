@@ -96,7 +96,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="Park M Logo" className="h-12 w-auto object-contain" style={{maxWidth: '250px'}} />
+            <img src="/logo.png" alt="Park M Logo" className="h-12 w-auto object-contain" style={{maxWidth: '250px', filter: 'brightness(0) invert(1)'}} />
           </Link>
 
           {/* Desktop Navigation */}
