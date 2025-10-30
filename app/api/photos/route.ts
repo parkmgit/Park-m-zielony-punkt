@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db-config';
+import { query } from '@/lib/db';
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary

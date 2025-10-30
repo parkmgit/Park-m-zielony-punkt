@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query, queryOne } from '@/lib/db-config';
+import { query, queryOne } from '@/lib/db';
 
 export async function GET() {
   try {
