@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Search, MapPin, Calendar, User, Building, X, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Search, MapPin, Calendar, User, Building, X, Download, FileText, Edit, Trash2 } from 'lucide-react';
 import { Tree } from '@/lib/types';
 
 interface Project {
@@ -59,6 +59,30 @@ export default function TreesPage() {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteTree = async (treeId: number) => {
+    if (!confirm('Czy na pewno chcesz usunąć to drzewo? Ta operacja jest nieodwracalna.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/trees/${treeId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Drzewo zostało usunięte');
+        setIsDrawerOpen(false);
+        fetchData(); // Odśwież listę
+      } else {
+        const error = await response.json();
+        alert('Błąd usuwania drzewa: ' + error.error);
+      }
+    } catch (error) {
+      console.error('Error deleting tree:', error);
+      alert('Błąd usuwania drzewa');
     }
   };
 
@@ -628,18 +652,31 @@ export default function TreesPage() {
                 <X className="w-6 h-6 text-white" />
               </button>
               <div className="flex gap-2">
+                <Link
+                  href={`/edit-tree/${selectedTree.id}`}
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edytuj
+                </Link>
+                <button
+                  onClick={() => handleDeleteTree(selectedTree.id)}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Usuń
+                </button>
                 <button
                   onClick={exportTreeToPDF}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                 >
                   <FileText className="w-4 h-4" />
-                  Eksportuj PDF
+                  PDF
                 </button>
                 <Link
                   href={`/trees/${selectedTree.id}`}
                   className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                 >
-                  Pełna strona
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path d="M7 17 17 7M7 7h10v10" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>

@@ -46,3 +46,89 @@ export async function GET(
     );
   }
 }
+
+// UPDATE tree
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+    
+    console.log('Updating tree:', params.id, body);
+
+    await query(
+      `UPDATE trees SET 
+        tree_number = ?,
+        species_id = ?,
+        site_id = ?,
+        worker_id = ?,
+        plant_date = ?,
+        status = ?,
+        latitude = ?,
+        longitude = ?,
+        accuracy = ?,
+        notes = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+      [
+        body.tree_number || null,
+        body.species_id ? parseInt(body.species_id as any) : null,
+        parseInt(body.site_id as any),
+        body.worker_id ? parseInt(body.worker_id as any) : null,
+        body.plant_date,
+        body.status,
+        body.latitude,
+        body.longitude,
+        body.accuracy || null,
+        body.notes || null,
+        params.id
+      ]
+    );
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Tree updated successfully' 
+    });
+  } catch (error: any) {
+    console.error('Error updating tree:', error);
+    return NextResponse.json(
+      { error: 'Failed to update tree', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE tree
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    console.log('Deleting tree:', params.id);
+
+    // Check if tree exists
+    const tree = await queryOne('SELECT id FROM trees WHERE id = ?', [params.id]);
+    
+    if (!tree) {
+      return NextResponse.json(
+        { error: 'Tree not found' },
+        { status: 404 }
+      );
+    }
+
+    // Delete tree (cascade will delete related actions and photos)
+    await query('DELETE FROM trees WHERE id = ?', [params.id]);
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Tree deleted successfully' 
+    });
+  } catch (error: any) {
+    console.error('Error deleting tree:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete tree', details: error.message },
+      { status: 500 }
+    );
+  }
+}
