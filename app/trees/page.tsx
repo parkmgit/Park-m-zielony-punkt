@@ -70,13 +70,13 @@ export default function TreesPage() {
       tree.notes?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = !filterStatus || tree.status === filterStatus;
-    const matchesProject = !filterProject || tree.site_id?.toString() === filterProject;
+    const matchesProject = !filterProject || tree.project_id?.toString() === filterProject;
     
     return matchesSearch && matchesStatus && matchesProject;
   });
 
   // Get selected project stats
-  const selectedProjectTrees = filterProject ? trees.filter(t => t.site_id?.toString() === filterProject) : trees;
+  const selectedProjectTrees = filterProject ? trees.filter(t => t.project_id?.toString() === filterProject) : trees;
   const projectStats = {
     total: selectedProjectTrees.length,
     posadzone: selectedProjectTrees.filter(t => t.status === 'posadzone').length,
@@ -98,7 +98,7 @@ export default function TreesPage() {
   const exportTreeToPDF = () => {
     if (!selectedTree) return;
     
-    const project = projects.find(p => p.id === selectedTree.site_id);
+    const project = projects.find(p => p.id === selectedTree.project_id);
     
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
@@ -297,7 +297,7 @@ export default function TreesPage() {
     treesContainer.innerHTML = '';
     
     for (const tree of filteredTrees) {
-      const project = projects.find(p => p.id === tree.site_id);
+      const project = projects.find(p => p.id === tree.project_id);
       
       // Fetch photo for this tree
       let photoURL = '';
@@ -393,7 +393,7 @@ export default function TreesPage() {
     
     filteredTrees.forEach(tree => {
       // Find project details
-      const project = projects.find(p => p.id === tree.site_id);
+      const project = projects.find(p => p.id === tree.project_id);
       
       const row = [
         tree.id,
