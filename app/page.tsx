@@ -35,7 +35,8 @@ export default function Home() {
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
           <TreePine className="w-24 h-24 text-[#22c55e] mx-auto mb-4" {...iconProps} />
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">System Ewidencji Drzew</h1>
+          <h1 className="text-4xl font-bold text-[#22c55e] mb-2">Zielony Punkt</h1>
+          <p className="text-lg text-gray-600 dark:text-slate-300">System Ewidencji Drzew Grupy Park M</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
