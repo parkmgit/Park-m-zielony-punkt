@@ -58,25 +58,35 @@ export default function AddTreePage() {
     setBestAccuracy(Infinity);
     
     if ('geolocation' in navigator) {
-      // Użyj getCurrentPosition - prostsze i bardziej niezawodne
-      navigator.geolocation.getCurrentPosition(
+      // Użyj watchPosition - ciągłe monitorowanie dla najlepszej dokładności
+      const watchId = navigator.geolocation.watchPosition(
         (position) => {
           const accuracy = position.coords.accuracy;
           
-          setFormData(prev => ({
-            ...prev,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: accuracy
-          }));
-          setBestAccuracy(accuracy);
-          setGpsLoading(false);
-          
-          console.log('Lokalizacja pobrana:', {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            accuracy: accuracy
-          });
+          // Aktualizuj tylko jeśli dokładność jest lepsza
+          if (accuracy < bestAccuracy) {
+            setFormData(prev => ({
+              ...prev,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+              accuracy: accuracy
+            }));
+            setBestAccuracy(accuracy);
+            
+            console.log('📍 Lepsza lokalizacja:', {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracy: accuracy.toFixed(1) + 'm'
+            });
+            
+            // Jeśli dokładność < 10m, automatycznie zatrzymaj
+            if (accuracy < 10) {
+              console.log('✅ Doskonała dokładność osiągnięta!');
+              navigator.geolocation.clearWatch(watchId);
+              setGpsWatchId(null);
+              setGpsLoading(false);
+            }
+          }
         },
         (error) => {
           console.error('GPS Error:', error);
@@ -100,11 +110,23 @@ export default function AddTreePage() {
           setGpsLoading(false);
         },
         {
-          enableHighAccuracy: false,  // Wi-Fi/Cell - działa w budynkach
-          timeout: 10000,
-          maximumAge: 5000  // Może użyć cache do 5 sekund
+          enableHighAccuracy: true,   // Używa GPS - dokładność 3-10m
+          timeout: 30000,              // 30 sekund na znalezienie satelitów
+          maximumAge: 0                // Zawsze pobieraj świeżą lokalizację
         }
       );
+      
+      setGpsWatchId(watchId);
+      
+      // Automatycznie zatrzymaj po 45 sekundach
+      setTimeout(() => {
+        if (watchId) {
+          navigator.geolocation.clearWatch(watchId);
+          setGpsWatchId(null);
+          setGpsLoading(false);
+          console.log('⏱️ Timeout - zatrzymano pobieranie GPS');
+        }
+      }, 45000);
     } else {
       alert('GPS nie jest dostępny w tej przeglądarce');
       setGpsLoading(false);
