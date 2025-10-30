@@ -140,7 +140,7 @@ export default function EditTreePage() {
                 required
               >
                 <option value="">Wybierz budowę</option>
-                {lookups.sites.map((site: any) => (
+                {lookups.sites?.map((site: any) => (
                   <option key={site.id} value={site.id}>
                     {site.code} - {site.name}
                   </option>
@@ -159,7 +159,7 @@ export default function EditTreePage() {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-full"
               >
                 <option value="">Wybierz gatunek</option>
-                {lookups.species.map((species: any) => (
+                {lookups.species?.map((species: any) => (
                   <option key={species.id} value={species.id}>
                     {species.name}
                   </option>
@@ -178,7 +178,7 @@ export default function EditTreePage() {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-full"
               >
                 <option value="">Wybierz wykonawcę</option>
-                {lookups.workers.map((worker: any) => (
+                {lookups.workers?.map((worker: any) => (
                   <option key={worker.id} value={worker.id}>
                     {worker.name}
                   </option>

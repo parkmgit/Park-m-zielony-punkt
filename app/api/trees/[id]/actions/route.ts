@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { query } from '@/lib/db';
+import { query } from '@/lib/db-config';
 import { CreateTreeActionDTO } from '@/lib/types';
 
 export async function GET(
@@ -46,7 +46,7 @@ export async function POST(
     );
 
     // Update tree's updated_at timestamp
-    await query('UPDATE trees SET updated_at = NOW() WHERE id = ?', [params.id]);
+    await query('UPDATE trees SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', [params.id]);
 
     return NextResponse.json({
       id: newAction[0].id,

@@ -1,10 +1,16 @@
 import { neon } from '@netlify/neon';
 import bcrypt from 'bcrypt';
 
-// Neon PostgreSQL connection - automatically uses NETLIFY_DATABASE_URL
-const sql = neon();
+// Lazy initialization of Neon connection
+let sql: any = null;
 
-console.log('🚀 Using Neon PostgreSQL database');
+function getSql() {
+  if (!sql) {
+    console.log('🚀 Initializing Neon PostgreSQL database');
+    sql = neon();
+  }
+  return sql;
+}
 
 // Helper function to execute queries
 export async function query<T = any>(sqlQuery: string, params?: any[]): Promise<T[]> {
@@ -16,7 +22,7 @@ export async function query<T = any>(sqlQuery: string, params?: any[]): Promise<
       pgQuery = pgQuery.replace('?', `$${paramIndex++}`);
     }
     
-    const rows = await sql(pgQuery, params || []);
+    const rows = await getSql()(pgQuery, params || []);
     return rows as T[];
   } catch (error) {
     console.error('Query error:', error);
@@ -33,7 +39,7 @@ export async function queryOne<T = any>(sqlQuery: string, params?: any[]): Promi
 // Test database connection
 export async function testConnection(): Promise<boolean> {
   try {
-    await sql`SELECT 1`;
+    await getSql()`SELECT 1`;
     console.log('✓ Database connection successful');
     return true;
   } catch (error) {
@@ -196,6 +202,9 @@ async function insertDefaultData() {
       await query('INSERT INTO species (name, scientific_name) VALUES (?, ?)', ['Brzoza brodawkowata', 'Betula pendula']);
       await query('INSERT INTO species (name, scientific_name) VALUES (?, ?)', ['Sosna zwyczajna', 'Pinus sylvestris']);
       await query('INSERT INTO species (name, scientific_name) VALUES (?, ?)', ['Świerk pospolity', 'Picea abies']);
+      await query('INSERT INTO species (name, scientific_name) VALUES (?, ?)', ['Lipa srebrzysta Brabant', 'Tilia tomentosa Brabant']);
+      await query('INSERT INTO species (name, scientific_name) VALUES (?, ?)', ['Wiśnia piłkowana Kanzan', 'Prunus serrulata Kanzan']);
+      await query('INSERT INTO species (name, scientific_name) VALUES (?, ?)', ['Grusza drobnoowocowa Chanticleer', 'Pyrus calleryana Chanticleer']);
       
       console.log('Default data inserted successfully');
       console.log('Default password for all users: password123');

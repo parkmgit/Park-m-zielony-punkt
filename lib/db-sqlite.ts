@@ -162,6 +162,9 @@ function insertDefaultData() {
       insertSpecies.run('Brzoza brodawkowata', 'Betula pendula');
       insertSpecies.run('Sosna zwyczajna', 'Pinus sylvestris');
       insertSpecies.run('Świerk pospolity', 'Picea abies');
+      insertSpecies.run('Lipa srebrzysta Brabant', 'Tilia tomentosa Brabant');
+      insertSpecies.run('Wiśnia piłkowana Kanzan', 'Prunus serrulata Kanzan');
+      insertSpecies.run('Grusza drobnoowocowa Chanticleer', 'Pyrus calleryana Chanticleer');
       
       console.log('Default data inserted successfully');
       console.log('Default password for all users: password123');
@@ -174,7 +177,16 @@ function insertDefaultData() {
 // Helper function to execute queries
 export function query<T = any>(sql: string, params: any[] = []): T[] {
   const stmt = db.prepare(sql);
-  return stmt.all(...params) as T[];
+  
+  // Check if it's a SELECT query
+  const trimmedSql = sql.trim().toUpperCase();
+  if (trimmedSql.startsWith('SELECT') || trimmedSql.startsWith('PRAGMA')) {
+    return stmt.all(...params) as T[];
+  } else {
+    // For INSERT, UPDATE, DELETE - run and return empty array
+    stmt.run(...params);
+    return [] as T[];
+  }
 }
 
 export function queryOne<T = any>(sql: string, params: any[] = []): T | undefined {

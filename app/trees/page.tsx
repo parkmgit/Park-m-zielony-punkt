@@ -15,6 +15,64 @@ interface Project {
   trees_planted: number;
 }
 
+// Component for displaying tree actions
+function TreeActions({ treeId }: { treeId: number }) {
+  const [actions, setActions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/trees/${treeId}/actions`)
+      .then(res => res.json())
+      .then(data => {
+        setActions(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Error loading actions:', err);
+        setLoading(false);
+      });
+  }, [treeId]);
+
+  if (loading) {
+    return (
+      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 text-center text-sm text-gray-500">
+        Ładowanie akcji...
+      </div>
+    );
+  }
+
+  if (actions.length === 0) {
+    return (
+      <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 text-center text-sm text-gray-500">
+        Brak akcji dla tego drzewa
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 py-3 bg-gray-50 dark:bg-gray-800 space-y-2">
+      {actions.map((action, index) => (
+        <div key={action.id || index} className="flex items-start gap-3 text-sm">
+          <div className="flex-shrink-0 w-2 h-2 mt-1.5 rounded-full bg-green-500"></div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-medium text-gray-800 dark:text-white">{action.action_type}</span>
+              <span className="text-gray-400">•</span>
+              <span className="text-gray-500 dark:text-gray-400">{new Date(action.performed_at).toLocaleDateString('pl-PL')}</span>
+            </div>
+            {action.performer_name && (
+              <div className="text-gray-600 dark:text-gray-400">Wykonawca: {action.performer_name}</div>
+            )}
+            {action.notes && (
+              <div className="text-gray-600 dark:text-gray-400 italic">{action.notes}</div>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function TreesPage() {
   const [trees, setTrees] = useState<Tree[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -25,19 +83,29 @@ export default function TreesPage() {
   const [selectedTree, setSelectedTree] = useState<Tree | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [treePhotos, setTreePhotos] = useState<string[]>([]);
+  const [treeActions, setTreeActions] = useState<any[]>([]);
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState<string>('');
+  const [expandedTreeId, setExpandedTreeId] = useState<number | null>(null);
 
   const openTreeDrawer = async (tree: Tree) => {
     setSelectedTree(tree);
     setIsDrawerOpen(true);
     
-    // Fetch photos for this tree
+    // Fetch photos and actions for this tree
     try {
-      const response = await fetch(`/api/photos?entity_type=tree&entity_id=${tree.id}`);
-      const photos = await response.json();
+      const [photosRes, actionsRes] = await Promise.all([
+        fetch(`/api/photos?entity_type=tree&entity_id=${tree.id}`),
+        fetch(`/api/trees/${tree.id}/actions`)
+      ]);
+      const photos = await photosRes.json();
+      const actions = await actionsRes.json();
       setTreePhotos(photos.map((p: any) => p.url));
+      setTreeActions(actions);
     } catch (error) {
-      console.error('Error fetching photos:', error);
+      console.error('Error fetching tree data:', error);
       setTreePhotos([]);
+      setTreeActions([]);
     }
   };
 
@@ -193,6 +261,32 @@ export default function TreesPage() {
         </div>
         ` : ''}
         
+        ${treeActions.length > 0 ? `
+        <div class="section">
+          <h2>Historia akcji (${treeActions.length})</h2>
+          <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr style="background: #e5e7eb; text-align: left;">
+                <th style="padding: 8px; border: 1px solid #d1d5db;">Data</th>
+                <th style="padding: 8px; border: 1px solid #d1d5db;">Typ akcji</th>
+                <th style="padding: 8px; border: 1px solid #d1d5db;">Wykonawca</th>
+                <th style="padding: 8px; border: 1px solid #d1d5db;">Notatki</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${treeActions.map(action => `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #d1d5db;">${new Date(action.performed_at).toLocaleDateString('pl-PL')}</td>
+                  <td style="padding: 8px; border: 1px solid #d1d5db;">${action.action_type}</td>
+                  <td style="padding: 8px; border: 1px solid #d1d5db;">${action.performer_name || '-'}</td>
+                  <td style="padding: 8px; border: 1px solid #d1d5db;">${action.notes || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        ` : ''}
+        
         <div class="section">
           <h2>Informacje systemowe</h2>
           <div class="info-grid">
@@ -323,16 +417,21 @@ export default function TreesPage() {
     for (const tree of filteredTrees) {
       const project = projects.find(p => p.id === tree.project_id);
       
-      // Fetch photo for this tree
+      // Fetch photo and actions for this tree
       let photoURL = '';
+      let actions: any[] = [];
       try {
-        const response = await fetch(`/api/photos?entity_type=tree&entity_id=${tree.id}`);
-        const photos = await response.json();
+        const [photosRes, actionsRes] = await Promise.all([
+          fetch(`/api/photos?entity_type=tree&entity_id=${tree.id}`),
+          fetch(`/api/trees/${tree.id}/actions`)
+        ]);
+        const photos = await photosRes.json();
+        actions = await actionsRes.json();
         if (photos.length > 0) {
           photoURL = photos[0].url;
         }
       } catch (error) {
-        console.error('Error fetching photo:', error);
+        console.error('Error fetching tree data:', error);
       }
       
       const photoHTML = photoURL 
@@ -386,6 +485,32 @@ export default function TreesPage() {
             </div>
             ` : ''}
           </div>
+          
+          ${actions.length > 0 ? `
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
+            <strong style="color: #22c55e;">Historia akcji (${actions.length}):</strong>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px;">
+              <thead>
+                <tr style="background: #f3f4f6;">
+                  <th style="padding: 6px; border: 1px solid #d1d5db; text-align: left;">Data</th>
+                  <th style="padding: 6px; border: 1px solid #d1d5db; text-align: left;">Typ akcji</th>
+                  <th style="padding: 6px; border: 1px solid #d1d5db; text-align: left;">Wykonawca</th>
+                  <th style="padding: 6px; border: 1px solid #d1d5db; text-align: left;">Notatki</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${actions.map(action => `
+                  <tr>
+                    <td style="padding: 6px; border: 1px solid #d1d5db;">${new Date(action.performed_at).toLocaleDateString('pl-PL')}</td>
+                    <td style="padding: 6px; border: 1px solid #d1d5db;">${action.action_type}</td>
+                    <td style="padding: 6px; border: 1px solid #d1d5db;">${action.performer_name || '-'}</td>
+                    <td style="padding: 6px; border: 1px solid #d1d5db;">${action.notes || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
         </div>
       `;
       
@@ -579,53 +704,80 @@ export default function TreesPage() {
               </div>
             ) : (
               filteredTrees.map((tree) => (
-                <button
-                  key={tree.id}
-                  onClick={() => openTreeDrawer(tree)}
-                  className="w-full text-left border border-gray-200 dark:border-gray-700 rounded-3xl p-4 hover:shadow-md hover:border-green-500 dark:hover:border-green-500 transition-all"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-semibold text-lg text-gray-800 dark:text-white">
-                        {tree.tree_number && <span className="text-green-600 dark:text-green-400 mr-2">{tree.tree_number}</span>}
-                        {tree.species_name || 'Nieznany gatunek'}
-                      </h3>
-                      <span className={`inline-block px-2 py-1 rounded text-xs font-medium mt-1 ${getStatusColor(tree.status)}`}>
-                        {tree.status}
-                      </span>
-                    </div>
-                    <div className="text-right text-sm text-gray-500 dark:text-gray-400">
-                      ID: {tree.id}
-                    </div>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300 mt-3">
-                    <div className="flex items-center gap-2">
-                      <Building className="w-4 h-4" />
-                      <span>{tree.site_code} - {tree.site_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>{new Date(tree.plant_date).toLocaleDateString('pl-PL')}</span>
-                    </div>
-                    {tree.worker_name && (
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4" />
-                        <span>{tree.worker_name}</span>
+                <div key={tree.id} className="border border-gray-200 dark:border-gray-700 rounded-3xl overflow-hidden">
+                  <button
+                    onClick={() => openTreeDrawer(tree)}
+                    className="w-full text-left p-4 hover:shadow-md hover:border-green-500 dark:hover:border-green-500 transition-all"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-semibold text-lg text-gray-800 dark:text-white">
+                          {tree.tree_number && <span className="text-green-600 dark:text-green-400 mr-2">{tree.tree_number}</span>}
+                          {tree.species_name || 'Nieznany gatunek'}
+                        </h3>
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium mt-1 ${getStatusColor(tree.status)}`}>
+                          {tree.status}
+                        </span>
                       </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      <span>{tree.latitude.toFixed(6)}, {tree.longitude.toFixed(6)}</span>
+                      <div className="text-right text-sm text-gray-500 dark:text-gray-400">
+                        ID: {tree.id}
+                      </div>
                     </div>
-                  </div>
 
-                  {tree.notes && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 italic">
-                      {tree.notes}
-                    </p>
+                    <div className="grid md:grid-cols-2 gap-2 text-sm text-gray-600 dark:text-gray-300 mt-3">
+                      <div className="flex items-center gap-2">
+                        <Building className="w-4 h-4" />
+                        <span>{tree.site_code} - {tree.site_name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(tree.plant_date).toLocaleDateString('pl-PL')}</span>
+                      </div>
+                      {tree.worker_name && (
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          <span>{tree.worker_name}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
+                        <span>{tree.latitude.toFixed(6)}, {tree.longitude.toFixed(6)}</span>
+                      </div>
+                    </div>
+
+                    {tree.notes && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 italic">
+                        {tree.notes}
+                      </p>
+                    )}
+                  </button>
+                  
+                  {/* Actions toggle button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setExpandedTreeId(expandedTreeId === tree.id ? null : tree.id);
+                    }}
+                    className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between text-sm"
+                  >
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {expandedTreeId === tree.id ? 'Ukryj akcje' : 'Pokaż akcje'}
+                    </span>
+                    <svg 
+                      className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${expandedTreeId === tree.id ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {/* Actions list */}
+                  {expandedTreeId === tree.id && (
+                    <TreeActions treeId={tree.id} />
                   )}
-                </button>
+                </div>
               ))
             )}
           </div>
@@ -689,11 +841,18 @@ export default function TreesPage() {
               {/* Photo */}
               <div className="w-full">
                 {treePhotos.length > 0 ? (
-                  <img
-                    src={treePhotos[0]}
-                    alt="Zdjęcie drzewa"
-                    className="w-full h-80 object-cover"
-                  />
+                  <div className="relative group cursor-pointer" onClick={() => { setSelectedPhoto(treePhotos[0]); setIsPhotoModalOpen(true); }}>
+                    <img
+                      src={treePhotos[0]}
+                      alt="Zdjęcie drzewa"
+                      className="w-full h-80 object-cover transition-opacity hover:opacity-90"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-colors pointer-events-none">
+                      <svg className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                  </div>
                 ) : (
                   <div className="w-full h-80 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30 flex items-center justify-center">
                     <div className="text-center">
@@ -810,6 +969,24 @@ export default function TreesPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Photo Modal - Full Screen */}
+      {isPhotoModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-4" onClick={() => setIsPhotoModalOpen(false)}>
+          <button
+            onClick={() => setIsPhotoModalOpen(false)}
+            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
+          >
+            <X className="w-8 h-8 text-white" />
+          </button>
+          <img
+            src={selectedPhoto}
+            alt="Pełne zdjęcie"
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
     </div>
