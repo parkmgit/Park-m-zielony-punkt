@@ -6,24 +6,6 @@ import { HomeIcon, FolderPlusIcon } from '@heroicons/react/24/outline';
 import { TreePine, LogOut, User, Download } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-const MoonIcon = () => (
-  <svg height="1em" role="presentation" viewBox="0 0 24 24" width="1em">
-    <path
-      d="M21.53 15.93c-.16-.27-.61-.69-1.73-.49a8.46 8.46 0 01-1.88.13 8.409 8.409 0 01-5.91-2.82 8.068 8.068 0 01-1.44-8.66c.44-1.01.13-1.54-.09-1.76s-.77-.55-1.83-.11a10.318 10.318 0 00-6.32 10.21 10.475 10.475 0 007.04 8.99 10 10 0 002.89.55c.16.01.32.02.48.02a10.5 10.5 0 008.47-4.27c.67-.93.49-1.519.32-1.79z"
-      fill="currentColor"
-    />
-  </svg>
-);
-
-const SunIcon = () => (
-  <svg height="1em" role="presentation" viewBox="0 0 24 24" width="1em">
-    <g fill="currentColor">
-      <path d="M19 12a7 7 0 11-7-7 7 7 0 017 7z" />
-      <path d="M12 22.96a.969.969 0 01-1-.96v-.08a1 1 0 012 0 1.038 1.038 0 01-1 1.04zm7.14-2.82a1.024 1.024 0 01-.71-.29l-.13-.13a1 1 0 011.41-1.41l.13.13a1 1 0 010 1.41.984.984 0 01-.7.29zm-14.28 0a1.024 1.024 0 01-.71-.29 1 1 0 010-1.41l.13-.13a1 1 0 011.41 1.41l-.13.13a1 1 0 01-.7.29zM22 13h-.08a1 1 0 010-2 1.038 1.038 0 011.04 1 .969.969 0 01-.96 1zM2.08 13H2a1 1 0 010-2 1.038 1.038 0 011.04 1 .969.969 0 01-.96 1zm16.93-7.01a1.024 1.024 0 01-.71-.29 1 1 0 010-1.41l.13-.13a1 1 0 011.41 1.41l-.13.13a.984.984 0 01-.7.29zm-14.02 0a1.024 1.024 0 01-.71-.29l-.13-.14a1 1 0 011.41-1.41l.13.13a1 1 0 010 1.41.97.97 0 01-.7.3zM12 3.04a.969.969 0 01-1-.96V2a1 1 0 012 0 1.038 1.038 0 01-1 1.04z" />
-    </g>
-  </svg>
-);
-
 interface CurrentUser {
   id: number;
   name: string;
@@ -34,15 +16,11 @@ interface CurrentUser {
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isDark, setIsDark] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
 
   useEffect(() => {
-    // Check initial theme
-    setIsDark(document.documentElement.classList.contains('dark'));
-    
     // Fetch current user if not on login page
     if (pathname !== '/login' && pathname !== '/register') {
       fetch('/api/auth/me')
@@ -69,19 +47,6 @@ export default function Navbar() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, [pathname]);
-
-  const toggleTheme = () => {
-    const newTheme = !isDark;
-    setIsDark(newTheme);
-    
-    if (newTheme) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -187,27 +152,6 @@ export default function Navbar() {
                 <span className="text-sm font-medium">Wyloguj</span>
               </button>
             )}
-            
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="relative inline-flex items-center h-10 w-16 rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-[#22c55e] focus:ring-offset-2"
-              style={{
-                backgroundColor: isDark ? '#15803d' : '#86efac'
-              }}
-            >
-              <span
-                className={`inline-flex items-center justify-center h-8 w-8 rounded-full bg-white shadow-lg transform transition-transform duration-300 ${
-                  isDark ? 'translate-x-7 text-gray-800' : 'translate-x-1 text-gray-800'
-                }`}
-              >
-                {isDark ? (
-                  <SunIcon />
-                ) : (
-                  <MoonIcon />
-                )}
-              </span>
-            </button>
           </div>
 
           {/* Mobile Navigation */}
@@ -256,27 +200,6 @@ export default function Navbar() {
                 <span className="text-xs">Wyloguj</span>
               </button>
             )}
-            
-            {/* Theme Toggle Mobile */}
-            <button
-              onClick={toggleTheme}
-              className="relative inline-flex items-center h-8 w-14 rounded-full transition-colors duration-300 focus:outline-none"
-              style={{
-                backgroundColor: isDark ? '#15803d' : '#86efac'
-              }}
-            >
-              <span
-                className={`inline-flex items-center justify-center h-6 w-6 rounded-full bg-white shadow-lg transform transition-transform duration-300 text-sm ${
-                  isDark ? 'translate-x-7 text-gray-800' : 'translate-x-1 text-gray-800'
-                }`}
-              >
-                {isDark ? (
-                  <SunIcon />
-                ) : (
-                  <MoonIcon />
-                )}
-              </span>
-            </button>
           </div>
         </div>
       </div>

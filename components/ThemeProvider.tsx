@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
+type Theme = 'dark';
 
 interface ThemeContextType {
   theme: Theme;
@@ -15,35 +15,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('dark');
 
   useEffect(() => {
-    // Sprawdź localStorage przy montowaniu
-    const savedTheme = localStorage.getItem('theme') as Theme;
-    if (savedTheme === 'light' || savedTheme === 'dark') {
-      setTheme(savedTheme);
-      applyTheme(savedTheme);
-    } else {
-      // Domyślnie ciemny
-      setTheme('dark');
-      applyTheme('dark');
-      localStorage.setItem('theme', 'dark');
-    }
+    // Wymuś tryb ciemny dla wszystkich użytkowników
+    const root = document.documentElement;
+    root.classList.remove('light');
+    root.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
   }, []);
 
-  const applyTheme = (newTheme: Theme) => {
-    const root = document.documentElement;
-    
-    // Usuń obie klasy najpierw
-    root.classList.remove('light', 'dark');
-    
-    // Dodaj odpowiednią klasę
-    root.classList.add(newTheme);
-  };
-
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    
-    setTheme(newTheme);
-    applyTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    // Funkcja wyłączona - zawsze ciemny motyw
+    return;
   };
 
   return (
